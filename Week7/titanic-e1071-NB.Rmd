@@ -1,0 +1,66 @@
+---
+title: "Tutorial: naive Bayes in Pakcage e1071 for Titanic Prediction"
+author: "Subbu K"
+date: "11/21/2019"
+output: word_document
+---
+
+This is a tutorial on using the naive Bayes algorithm in the e1071 package to predict Titanic survivors.
+
+# prepare data
+
+First load the training data in csv format, and then convert "Survived" to nominal variable and "Pclass" to ordinal variable.
+```{r}
+trainset <- read.csv("C:/Users/Administrator/Documents/MSDatascience/IST707/Week7/itanic-train.csv")
+trainset$Survived=factor(trainset$Survived)
+trainset$Pclass=ordered(trainset$Pclass)
+```
+
+Then load the test data and convert attributes in similar way.
+```{r}
+testset <- read.csv("C:/Users/Administrator/Documents/MSDatascience/IST707/Week7/titanic-test.csv")
+testset$Survived=factor(testset$Survived)
+testset$Pclass=ordered(testset$Pclass)
+```
+
+Then remove some attributes that are not likely to be helpful, such as "embarked" - create a new data set with all other attributes. Process the train and test set in the same way. 
+```{r}
+myVars=c("Pclass", "Sex", "Age", "SibSp", "Fare", "Survived")
+newtrain=trainset[myVars]
+newtest=testset[myVars]
+```
+# naive Bayes in e1071
+
+Now load the package e1071
+```{r}
+library(e1071)
+```
+
+Build naive Bayes model using the e1071 package
+```{r}
+nb=naiveBayes(Survived~., data = newtrain, laplace = 1, na.action = na.pass)
+```
+
+Apply the model to predicting test data
+```{r}
+pred=predict(nb, newdata=newtest, type=c("class"))
+```
+
+Combine the predictions with the corresponding case ids. 
+```{r}
+myids=c("PassengerId")
+id_col=testset[myids]
+newpred=cbind(id_col, pred)
+```
+
+Add header to output
+```{r}
+colnames(newpred)=c("Passengerid", "Survived")
+```
+
+Write output to file
+```{r}
+write.csv(newpred, file="C:/Users/Administrator/Documents/MSDatascience/IST707/Week7/titanic-NB-pred.csv", row.names=FALSE)
+```
+
+For more information about naive Bayes in e1071, see the manual at https://cran.r-project.org/web/packages/e1071/e1071.pdf

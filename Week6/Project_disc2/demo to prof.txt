@@ -1,0 +1,49 @@
+
+Our team is Sangam, Matt and Myself
+
+
+we picked on IBM HR Analytics Employee Attrition dataset for our project.   The goal is to build a model that can help uncover factors that influence attrition rate for the oraganization, by focusing ont he key factors listed. 
+
+ Data Set: Contains 1,470 observations and 35 variables and a total of 51,450 values.  we dont have 11 mill rows with 104 million data points like Jeremy...
+
+We performed datacleansing on this dataset even though most part the data set doesnt require much of preprocessing..  
+       Fixing  column names , 
+       Columns with Same value 
+
+The attrition percentage  is around 16-17% (i.e., 16% - employees leaving organization.
+
+Through data exploratory  we want to understand and summarize the characteristics of variables that are influence  attrition rate  
+
+we used ggplot, lattice for pretifying and grid to get them grouped
+
+valid field chart -- 
+Some of the learnings are 
+
+found some interesting facts
+
+For eg.,   Is people at certain leaving the organization  (in our case attrition rate are high for employees around age group 30)  
+and similarly  high % of people  who travel  to leave the organization. 
+
+And in contrary to our default assumptions, the actual behvior varies with some variable -  like we notice  people who left organization are the ones who live closer to  work. 
+
+And some are close our assumptions, higher attrition noticed for low Job Satisfaction levels. 
+
+ some   we dont see distinguishable feature that contributes.  daily rates that has minimal or no impact.
+
+Still half way thru EDA,  we continue with rest of the variables in the dataset to understand the characterstics and their influence towards attrition..
+ 
+
+Sampling
+
+If the  proportion of Minority class is too low, consider focusing  on balancing using oversampling or undersampling techniques.
+dataset the minority is [Attrition - Yes ] cases ( 16%).
+
+-Create new features with the existing variables , based on some of our assumptions. we want to creating new features with the existing variables expectation for better outcome.
+
+(people who worked with many companies in short span of years, OR extended period on the same role for long run without change, Salary received vs industry avg) focus on feature engineering 
+
+Understand correlation of variables 
+
+and  focus on building Model & validating to deliver our results.   ((aiming on tree based methods ., A simple Decision Tree,random forest)  
+
+Once we identify the best model, we try to tune it further to get the best results

@@ -1,0 +1,141 @@
+---
+title: "ProjectIST707_Discussion2"
+author: "Sangam_Matt_Subbu"
+date: "11/12/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary 
+Retaining human capital and talent management is increasingly becoming a competitive game within an already complex and adaptive economic system. In a tight labor market perks like flexibility to work from home or anywhere, signing bonuses, and equity in the form of restricted stock units are just a couple of the benefits that companies are offering their employees.
+
+The data set that the data analytics team is exploring is the IBM HR Analytics Employee Attrition & Performance. The aim is to use this data to predict the attrition of the most valuable employees.
+
+Questions: 
+1. What are the key factors that lead to employee attrition?
+
+2. How can companies improve and in what areas in order to retain their best employees and keep them from accepting a more attractive offer from a competitor?
+
+3. How can we predict which employees are at a higher risk for leaving?
+
+4. What can we do to proactively address these employees with a high risk for leaving to course correct their potential actions?
+
+*There are likely many more questions that will arise with further exploration of the data. The team believes that these preliminary questions will open the doors to other insightful analysis.
+
+Data Set: Contains 1,470 observations and 35 variables and a total of 51,450 values.
+ 
+```{r cars}
+
+#Step:1 Import Dataset 
+
+IBMHRData <- read.csv("HREmployeeAttrition.csv") 
+names(IBMHRData)
+
+# We cam see  column name for age "ï..Age"  need to be updated  on this dataset.
+colnames(IBMHRData)[1] <- "Age"
+ 
+library(caret)    # models
+library(lattice)  # robust & elegant  visualization
+library(ggplot2)  # plotting graphs
+library(grid) #  modify specific elements of a plot
+library(gridExtra) # to arrange multiple grid-based plots
+#Set seed number as starting point to generate random numbers
+set.seed(12345)  
+# Divide our dataset into training(75%) and testing(25%)
+inTrain <- createDataPartition(IBMHRData$Attrition,p=0.80,list = FALSE)
+Training <- IBMHRData[inTrain,] 
+Testing <- IBMHRData[-inTrain,]
+str(Training)
+
+```
+
+## Data Exploration  
+
+Looking at the attrition percentage from the training data set, we could see the attrition percentage is around  16%  (i.e., 16% - employees leaving organization.)
+In our Data exploration process, we are trying to understand how each variable in the dataset influencing the attrition of the organization.  We 're using ggplot2 to plot  and measure this and also using lattice, grid, gridExtra  for simple and better visualization.
+
+```{r pressure, echo=FALSE}
+#Using ggplot2 to view the attrition Percent of training set 
+attritionPlot <- ggplot(Training,aes(Attrition,fill=Attrition))+geom_bar()
+attritionPlot
+
+# Next step is to look at ALL variables and understand how each influence the attrition of this organization.
+
+#DailyRate : Rate is not presenting any distinguishable result. 
+
+ratePlot <- ggplot(Training,aes(DailyRate,Attrition, color = "red"))+geom_point(size=4,alpha = 0.05) + facet_grid(~Attrition)
+
+ ratePlot
+
+#Age : There is a clear indication that majority of the employees leaving the organization  are around 30 years  
+agePlot <- ggplot(Training,aes(Age,fill=Attrition, color = "red"))+geom_density()+facet_grid(~Attrition) 
+
+agePlot
+
+#Department : Attrition rate is high from Research and development department, and HR department marks the least because of low proportion of HR employees in the organization.
+depPlot <- ggplot(Training,aes(Department,fill = Attrition, color = "red"))+geom_bar() 
+
+depPlot
+
+#Travel : People who travel leave the most compare to the non-travel employees.
+  travelPlot <- ggplot(Training,aes(Attrition,BusinessTravel,color=Attrition))+geom_jitter()
+travelPlot
+ 
+
+```
+## Lets continue with second set of variables and see it's influence on the attrition 
+
+```{r}
+
+#Distance from Home : Unlike the norms, most  of employees who have left the organization were closer  to the Office. 
+
+distPlot <- ggplot(Training,aes(DistanceFromHome,fill=Attrition, color = "blue"))+geom_bar() 
+distPlot
+
+#Environment Satisfaction: Ratings stand for - 1 ‘Low’ 2 ‘Medium’ 3 ‘High’ 4 ‘Very High’ . We don’t see any distinguishable feature
+
+envPlot <- ggplot(Training,aes(EnvironmentSatisfaction,fill=Attrition,color = "blue"))+geom_bar()
+envPlot
+
+#Education : Docts in the lowest numbers - probably due to very low percentage of doctors working.
+eduPlot <- ggplot(Training,aes(Education,fill=Attrition,color = "blue"))+geom_bar()
+eduPlot
+
+#Education Field: On lines of the trend in Departments, a minority of HR educated employees leave and it is majorly because of low number of people
+
+edufieldPlot <- ggplot(Training,aes(EducationField,fill=Attrition,color = "blue"))+geom_bar() 
+edufieldPlot
+#Environment Satisfaction: Ratings stand for - 1 ‘Low’ 2 ‘Medium’ 3 ‘High’ 4 ‘Very High’ . We don’t see any distinguishable feature
+
+envPlot <- ggplot(Training,aes(EnvironmentSatisfaction,fill=Attrition,color = "blue"))+geom_bar() 
+envPlot
+#Gender: As you can see  majority of them left are Male and the reason might be because around 61% of employees in our dataset are Male
+
+genPlot <- ggplot(Training,aes(Gender,fill=Attrition,color = "blue"))+geom_bar() 
+genPlot
+
+#grid.arrange(distPlot,eduPlot,edufieldPlot,envPlot,genPlot,ncol=2,top = "   Attrition by Variable - Contd..  ")
+
+
+```
+
+## Remaining workflow
+
+- Sampling - (if required ONLY)  Not sure if we need to use techniques like Oversampling or undersampling, because there are advantages and disadvantages.  And for this analysis we will not  get improved results using these techniques  so we can continue using the sample we have for model building.
+
+
+#Correlation  (Ideas)
+ - Years at Company, Years in Curr Role, Years with Curr Manager & Years Since Last Promotion  
+ - Job Level & Monthly Income  
+ - Percent Salary Hike & Performance Ratiing  
+
+Model Building (Decision Tree Models), 
+
+Select right model 
+
+& final  result 
+
+

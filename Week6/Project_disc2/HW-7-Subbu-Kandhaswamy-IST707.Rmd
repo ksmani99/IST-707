@@ -1,0 +1,28 @@
+---
+title: "HW-6-Subbu-Kandhaswamy-IST707"
+author: "Subbu Kandhaswamy"
+date: "11/14/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+HW6: naïve Bayes and decision tree for handwriting recognition. The goal is to recognize digits 0 to 9 in handwriting images. We are going to use the sampled data to construct prediction models using naïve Bayes and decision tree algorithms. Tune their parameters to get the best model (measured by cross validation) and compare which algorithms provide better model for this task. 
+
+```{r cars}
+ 
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

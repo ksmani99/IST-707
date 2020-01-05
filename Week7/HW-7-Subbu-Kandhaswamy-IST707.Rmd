@@ -1,0 +1,192 @@
+---
+title: "HW-7-Subbu-Kandhaswamy-IST707"
+author: "Subbu Kandhaswamy"
+date: "11/21/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Homework7 SVMs, kNN, and Random Forestfor handwriting recognition
+In this we  use SVMs, kNN, and Random Forest algorithms for handwriting recognition, and compare their performance with the naïve Bayes and decision tree models you built in previous week
+ 
+ 
+
+```{r tidy=TRUE}
+# Load  packages.
+
+#install.packages("randomForest")
+library(caret)
+library(dplyr)
+library(stringr)
+library(e1071)
+library(rpart)
+library(randomForest)
+
+
+# Load Kggle-digit-train dataset. 
+dataSet <- read.csv('C:/Users/Administrator/Documents/MSDatascience/IST707/Week7/Kaggle-digit-train.csv')
+
+# Explore the dimension of the dataset, and the structure and summary of the first ten rows. 
+
+dim(dataSet)
+
+str(dataSet[, 1:10])
+
+summary(dataSet[, 1:10])
+
+# Let's also check what the first 5 rows of the dataset look like.
+head(dataSet[, 1:10], n = 5)
+
+```
+
+Now that we have checked what the dataset look like, it's time to do some additional processing and then train the models. 
+
+#Datasets usage. 
+In  this case, we'll work on two new models: kNN (k-Nearest Neighbours) , SVM (Support Vector Machine) and Random Forest - which is an expansion of the decision tree algorithm we have previously worked on. 
+Also, due to the size of the training set, we'll only work with 30 percent of the dataset, setting the seeds and selecting two-thirds of this subset to serve as our training set and the remaining third to serve as our testing set. All these subsets will be chosen at random.  
+
+##Pre-Processing
+
+Considering the number of  variables, we'll make sure that we work with a select number of objects,to ensure that we don't eliminate unneccesary columns, only columns where there is no variance will be eliminated. 
+
+```{r tidy = TRUE}
+# Update/Replace all NAs with 0, count number of columns, and create a list that will populate the columns that sum 0. 
+
+dataSet[is.na(dataSet)] <- 0
+cols <- ncol(dataSet)
+vars <- list()
+
+# reviewing variables in dataset to find which present no variance. 
+for(i in 2:cols){
+  colVar <- var(dataSet[[i]])
+  if(colVar == 0){
+    vars <- append(vars, i)
+  }
+}
+
+# Remove/Drop the columns that have no variance in both the test and training set. 
+colsToDrop <- unlist(vars)
+
+dataSet <- dataSet[, -colsToDrop]
+
+# With the columns now selected, we'll now choose 20 percent of both the training and testing datasets. 
+set.seed(1024)
+
+split <- sample(nrow(dataSet), nrow(dataSet) * .3)
+dataSubset <- dataSet[split, ]
+
+# Now to select the training and testing sets from this subset. 
+set.seed(760)
+
+trainSplit <- sample(nrow(dataSubset), nrow(dataSubset) * 2/3)
+titanictrainSet <- dataSubset[trainSplit, ]
+titanictestSet <- dataSubset[-trainSplit, ]
+```
+
+After selecting the columns, we'll end up working with 8,400 records to train the model and 4,200 records to test the model.
+
+# Training and testing the models. 
+
+## k-Nearest Neighbours
+Starting off with kNN, we'll build the model using two-thirds of the training set and then use the remaining third of the same data to test the results. 
+Just to avoid redoing this process, we'll set the seed for the split and work from there. 
+
+```{r tidy = TRUE}
+# We'll first start by converting the label variable into a factor. Because we are building a classifier that will determine the probability that a observation belongs to a certain number, we need to convert the labels into factors that can then be converted to variable names
+titanictrainSet$label <- factor(paste0('X', titanictrainSet$label), levels = c('X0', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'X8', 'X9'))
+titanictestSet$label <- factor(paste0('X', titanictestSet$label), levels = c('X0', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'X8', 'X9'))
+
+# Now to start creating the kNN. We'll do three-fold CV as in the previous exercise. 
+set.seed(239)
+x <- trainControl(method = 'repeatedcv', repeats = 3, classProbs = TRUE)
+knnTrain <- train(label ~ ., data = titanictrainSet, method = 'knn', preProcess = c('center', 'scale'), trControl = x, metric = 'ROC', tuneLength = 3)
+
+# Model summary
+knnTrain
+plot(knnTrain)
+
+# Given these numbers, it appears that the model is extremely good at predicting the class label. Let's run the model on the test set. 
+knnPred <- predict(knnTrain, titanictestSet, type = 'prob')
+knnPred <- as.data.frame(knnPred)
+
+# Select maximum prediction.
+# We subtract 1 because we are showing the class label (i.e 0 is 1, 1 is 2, and so on.)
+knnPredictedValues <- data.frame(apply(knnPred, 1, which.max) - 1) 
+colnames(knnPredictedValues) <- 'prediction'
+
+# Compare to actual values
+knnResults <- titanictestSet %>% select(label) %>% mutate(real = str_remove(label, 'X')) %>% bind_cols(knnPredictedValues) %>% mutate(real = as.factor(real), prediction = as.factor(prediction))
+
+confusionMatrix(knnResults$real, knnResults$prediction)
+```
+
+The model takes a long time to run - training this model took two hours! - but the end results show that it is highly accurate when predicting class labels. We can see that for both the training and test sets, the accuracy is slightly over 90 percent which, so far, are the best results we have seen. 
+
+## Support Vector Machines
+
+Now, our attention will turn to SVMs. Since the data has already been processed, we will train the model. 
+
+```{r tidy = TRUE}
+# Run the model using Linear Kernel to classify the data. with CV = 3 (3 k-fold cross validatiion)
+
+svmTrain <- svm(label ~ ., data = titanictrainSet, type = 'C', kernel = 'linear', cross = 3, probability = TRUE)
+
+summary(svmTrain)
+
+```
+
+As we can see the SVM results  has a higher degree of accuracy within the training set than what kNN showed originally. 
+Now to run the test set on the model. 
+
+```{r tidy = TRUE}
+svmPred <- predict(svmTrain, titanictestSet, type = 'prob')
+svmPred <- as.data.frame(svmPred)
+colnames(svmPred) <- 'results'
+
+# Now, build the data frame to compare the results. 
+svmResults <- titanictestSet %>% select(label) %>% bind_cols(svmPred) %>% mutate(real = factor(as.character(str_remove(label, 'X'))), prediction = factor(as.character(str_remove(results, 'X'))))
+
+confusionMatrix(svmResults$real, svmResults$prediction)
+
+```
+
+The model's consistency is very impressive. It manages to also predict at a high accuracy. 
+
+## Random Forest
+
+Let's turn to the final model that we will work on: random forest. 
+
+```{r tidy = TRUE}
+x <- trainControl(method = 'repeatedcv', number = 3, repeats = 3)
+rfTrain <- train(label ~ ., data = titanictrainSet, method = 'rf', metric = 'Accuracy', trControl = x, type = 'C')
+
+rfTrain
+
+# With the given  results, the  train has a minimum accuracy on two variables sampled, but may this increases once we reach 37.
+```
+
+Accuracy of  94.6 percent accuracy,  is by far the superior model when comparing the three models we've built and the results according to the training set. But the most important thing is to compare the results of the testing set. 
+
+```{r tidy = TRUE}
+# Testing random forest model. 
+rfPred <- predict(rfTrain, titanictestSet, type = 'prob')
+rfPred <- as.data.frame(rfPred)
+
+rfPredictedValues <- data.frame(apply(rfPred, 1, which.max) - 1) 
+colnames(rfPredictedValues) <- 'results'
+
+# Random forest actual and predicted labels, and confusion matrix to comparte the model's prediciton capabilities.
+rfResults <- titanictestSet %>% select(label) %>% bind_cols(rfPredictedValues) %>% mutate(real = factor(as.character(str_remove(label, 'X'))), prediction = factor(results))
+
+confusionMatrix(rfResults$real, rfResults$prediction)
+```
+
+So results are on par with what was expected: 94.7 percent accuracy, by far the best out of these three models. 
+
+# Conclusion based on the above results : 
+
+The Models tested  presented very  high degrees of accuracy,  (over 90 percent of the time). However, points to remember is a)The size of the data is immense, we had to cut corners. b) We dismissed using the original test set as it did not have class labels, which we would've only been able to actually test in Kaggle. 3) In consideration to this, training dataset was used.  And additionally, considering the size of  this dataset(was over 40,000 records long), we were working with 30 percent of this - with all observations chosen at random. Since this was done prior to any splitting into a new training and testing set, there is no chance for observations to appear in both sets. Also, what's concerning is that maybe this would probably cause the models to overfit because of the limited size of the training sample. This could be ammended by using a larger set and adding more computing power. 
+However to conclude, the results we got 're satisfying and merit additional investigation towards finer parameter tuning and slowly add more observations to the training set to generate the best model.  

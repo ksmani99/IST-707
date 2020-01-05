@@ -1,0 +1,287 @@
+---
+title: "ProjectIST707_Demo1"
+author: "Matt/Sangam/Subbu"
+date: "12/2/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary 
+Retaining human capital and talent management is increasingly becoming a competitive game within an already complex and adaptive economic system. In a tight labor market perks like flexibility to work from home or anywhere, signing bonuses, and equity in the form of restricted stock units are just a couple of the benefits that companies are offering their employees.
+
+The data set that the data analytics team is exploring is the IBM HR Analytics Employee Attrition & Performance. The aim is to use this data to predict the attrition of the most valuable employees.
+
+Questions: 
+1. What are the key factors that lead to employee attrition?
+
+2. How can companies improve and in what areas in order to retain their best employees and keep them from accepting a more attractive offer from a competitor?
+
+3. How can we predict which employees are at a higher risk for leaving?
+
+4. What can we do to proactively address these employees with a high risk for leaving to course correct their potential actions?
+
+*There are likely many more questions that will arise with further exploration of the data. The team believes that these preliminary questions will open the doors to other insightful analysis.
+
+Data Set: Contains 1,470 observations and 35 variables and a total of 51,450 values.
+ 
+```{r cars}
+
+#Step:1 Import Dataset 
+#setwd("~/MSDatascience/IST707/Week6")
+IBMHRData <- read.csv("C:/Users/Administrator/Documents/MSDatascience/IST707/Week6/HREmployeeAttrition.csv") 
+names(IBMHRData)
+
+# We cam see  column name for age "ï..Age"  need to be updated  on this dataset.
+colnames(IBMHRData)[1] <- "Age"
+ 
+library(caret)    # models
+library(lattice)  # robust & elegant  visualization
+library(ggplot2)  # plotting graphs
+library(grid) #  modify specific elements of a plot
+library(gridExtra) # to arrange multiple grid-based plots
+#Set seed number as starting point to generate random numbers
+set.seed(12345)  
+# Divide our dataset into training(75%) and testing(25%)
+inTrain <- createDataPartition(IBMHRData$Attrition,p=0.80,list = FALSE)
+Training <- IBMHRData[inTrain,] 
+Testing <- IBMHRData[-inTrain,]
+str(Training)
+
+```
+
+## Data Exploration  
+
+Looking at the attrition percentage from the training data set, we could see the attrition percentage is around  16%  (i.e., 16% - employees leaving organization.)
+In our Data exploration process, we are trying to understand how each variable in the dataset influencing the attrition of the organization.  We 're using ggplot2 to plot  and measure this and also using lattice, grid, gridExtra  for simple and better visualization.
+
+```{r pressure, echo=FALSE}
+#Using ggplot2 to view the attrition Percent of training set 
+attritionPlot <- ggplot(Training,aes(Attrition,fill=Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(attritionPlot, top = "Attrition percent ")
+
+# Next step is to look at ALL variables and understand how each influence the attrition of this organization.
+
+#DailyRate : Rate is not presenting any distinguishable result. 
+
+ratePlot <- ggplot(Training,aes(DailyRate,Attrition, color = "red"))+geom_point(size=4,alpha = 0.05) + facet_grid(~Attrition)+
+        scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(ratePlot, top = "ATtrition by Rate")
+
+#Age : There is a clear indication that majority of the employees leaving the organization  are around 30 years  
+agePlot <- ggplot(Training,aes(Age,fill=Attrition, color = "red"))+geom_density()+facet_grid(~Attrition) +
+        scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(agePlot, top = "Attrition by Age")
+
+#Attition level comparison with change in  Age, Income and Marital Status
+ggplot(Training,aes(Age,MonthlyIncome,size=Age,col=factor(Attrition)))+geom_point(alpha=0.5)+theme_minimal()+facet_wrap(~MaritalStatus)+labs(x="Age",y="MonthlyIncome",title="Attrition Level Comparision ",subtitle="How Attrition is observed with change in Age,Income and MaritalStatus attributes",col="Attrition")+theme(legend.position="bottom",plot.title=element_text(size=16,hjust=0.5),plot.subtitle = element_text(size=10))+scale_color_brewer(palette="Set1")
+
+
+
+#Department : Attrition rate is high from Research and development department, and HR department marks the least because of low proportion of HR employees in the organization.
+#depPlot <- ggplot(Training,aes(Department,fill = Attrition, color = "red"))+
+#geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+#grid.arrange(depPlot, top = "Attrition by Department")
+
+depplot <- ggplot(HRA,aes(x=Department,group=Attrition))+
+        geom_bar(aes(y=..prop..,fill=factor(..x..)),stat="count")+facet_grid(~Attrition)+
+        scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")+
+        theme(axis.text.x=element_text(angle=90,vjust=0.5),legend.position="none",plot.title=element_text(size=16,hjust=0.5))+
+        labs(x="Department",y="Percentage",title="Department Vs Attrition Percent")+ 
+        geom_text(aes(label = scales::percent(..prop..), y = ..prop.. ),stat= "count",vjust =-.5) 
+grid.arrange(depplot, top = "Attrition rate Department")
+
+
+#Travel : Those who travel are the ones who leave the organization compare to those who dont travel. The filtered data (Attrition =Yes) for  Business travel attribute reveals that people who dont travel are likely to stay back  vs the people who Travel (Both Less and Frequent travelers)
+#===========================
+require(tidyverse)
+AttrByTravel <- Training %>% select(Attrition,BusinessTravel) %>% 
+        filter(Attrition =="Yes") %>%
+        na.omit()
+#=========================       
+travelPlot <- ggplot(AttrByTravel,aes(BusinessTravel, Attrition, color = BusinessTravel))+ geom_jitter(position = "jitter", aes(shape=  factor(BusinessTravel)))+
+        scale_fill_discrete(h= c(90,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")+facet_grid()
+grid.arrange(travelPlot, top = "Attrition by Travel Vs Non-Travel Employees")
+
+```
+## Lets continue with second set of variables and see it's influence on the attrition 
+
+```{r}
+
+#Distance from Home : Unlike the norms, most  of employees who have left the organization were closer  to the Office. 
+# ggplot(diamonds, aes(cut,fill=color))+
+# geom_bar(position="dodge")+ scale_fill_brewer(palette = "Pastel1")
+
+distPlot <- ggplot(Training,aes(DistanceFromHome,fill=Attrition))+
+       geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+       grid.arrange(distPlot, top = "Attrition by Distance from work")
+
+#view(Training)
+require(tidyverse)
+AttrByJobRole <- IBMHRData %>% select(Attrition,JobRole) %>%  filter(Attrition =="Yes") %>% na.omit()   
+jobRole <- ggplot(AttrByJobRole,aes(JobRole,fill=Attrition))+ 
+geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")+ theme(axis.text.x = element_text(angle = 90,  hjust=1))
+grid.arrange(jobRole, top = "Attrition by JobRole")
+
+#--------------------------
+#<todo> - JObrole vs Monthly income
+
+jobRole <- ggplot(Training,aes(MonthlyIncome,JobRole, group=Attrition ))+ geom_line() +
+#geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")+ theme(axis.text.x = element_text(angle = 90,  hjust=1))
+ 
+
+#---------------------------
+
+
+#Education : Docts in the lowest numbers - probably due to very low percentage of doctors working.
+eduPlot <- ggplot(Training,aes(Education,fill=Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(eduPlot, top = "Attrition by education")
+
+#Education Field: On lines of the trend in Departments, a minority of HR educated employees leave and it is majorly because of low number of people
+
+edufieldPlot <- ggplot(Training,aes(EducationField,fill=Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(edufieldPlot, top = "Attrition by education field")
+
+#Environment Satisfaction: Ratings stand for - 1 ‘Low’ 2 ‘Medium’ 3 ‘High’ 4 ‘Very High’ and it's not revealing any   distinguishable feature from what we see.
+
+envPlot <- ggplot(Training,aes(EnvironmentSatisfaction,fill=Attrition))+ 
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(envPlot,top ="Attrition by Environment Satisfaction")
+
+#Gender: As you can see  majority of them left are Male and the reason might be because around 61% of employees in our dataset are Male
+
+#salary with gender
+require(tidyverse)
+AttrByGender <- IBMHRData %>% select(Attrition,Gender,MonthlyIncome) %>%  filter(Attrition =="Yes") %>% na.omit()
+
+ggplot(AttrByGender,aes(Gender,MonthlyIncome,fill=Gender)) +geom_boxplot()+theme_few()+theme(legend.position="none",plot.title=element_text(hjust=0.5,size=10))+labs(x="Gender",y="Salary",title="Salary with Gender")+scale_fill_canva(palette="Wintery reds")+coord_flip()
+
+genPlot <- ggplot(AttrByGender,aes(Gender,fill=Attrition))+ 
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(genPlot,top ="Attrition by Gender")
+
+#grid.arrange(distPlot,eduPlot,edufieldPlot,envPlot,genPlot,ncol=2,top = "   Attrition by Variable - Contd..  ")
+
+
+```
+
+ 
+```{r}
+# From HourlyRate and Daily rate, we don’t get much inference  and both are directly related.  (we may need to nuke one off) .   From the involvement perpsective,  (1 is ‘Low’ 2 is ‘Medium’  ,  3 is  ‘High’  &  4 is ‘Very High’) we notice that majority of employees who leave are either Very Highly involved or Low Involved in their Jobs. JobLevel is another data point  where we notice  attrition is less as the Job Level increases.  Job Satisfaction which is an obvious metric where employees satisfaction is low have higher attrition rate.  
+
+#hourlyPlot <- ggplot(Training,aes(HourlyRate,fill=Attrition))+
+ #       geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+#grid.arrange(hourlyPlot,top ="Attrition by HourlyPlot")
+
+gsub(" ","",Training.JobRole)
+jobInvPlot <- ggplot(Training,aes(JobInvolvement,fill=Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(jobInvPlot,top ="Attrition by Job Involvement")
+
+jobLevelPlot <- ggplot(Training,aes(JobLevel,fill=Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(jobLevelPlot,top ="Attrition by Job Level")
+
+#jobSatPlot <- ggplot(Training,aes(JobSatisfaction,fill=Attrition))+
+#        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = #0, direction = 1, na.value = "grey50")
+#grid.arrange(jobSatPlot,top ="Attrition by Job Satisfaction")
+
+temp = Training %>% mutate(JobSatisfaction=factor(JobSatisfaction)) %>% mutate(JobSatisfaction=fct_recode(JobSatisfaction,"Low"="1","Medium"="2","High"="3","Very High"="4"))
+
+ggplot(temp,aes(x=JobRole,group=Attrition))+geom_bar(stat="count",aes(y=..prop..,fill=factor(..x..)))+labs(x="Job Role",y="Percentage",title="Job Role Vs Attrition Rates")+facet_wrap(~Attrition)+theme_few()+theme(legend.position="none",plot.title=element_text(hjust=0.5,size=10))+geom_text(aes(label=scales::percent(..prop..),y=..prop..),stat="count",vjust=-0.5)
+
+
+
+```
+
+#-----------------
+```{r}
+marPlot <- ggplot(Training,aes(MaritalStatus,fill=Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(marPlot,top ="Attrition by  Marital Status")
+
+monthlyIncPlot <- ggplot(Training,aes(MonthlyIncome,fill=Attrition))+geom_density()+
+        scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(monthlyIncPlot,top ="Attrition by Monthly Income ")
+
+monthlyRatePlot <- ggplot(Training,aes(MonthlyRate,fill=Attrition))+geom_density()+
+         scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(monthlyRatePlot,top ="Attrition by Monthly Rate ")
+
+numCompPlot <- ggplot(Training,aes(NumCompaniesWorked,fill=Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(numCompPlot,top ="Attrition by Companies Worked ")
+
+```
+
+```{r}
+#<Todo> - Combine Monthly income and  Overtime to show the attrition rate 
+
+#If monthly income is low,  the attrition rate is high.  We are validating this thru our decision tree model.
+#Also if the overtime =Yes, then the attrition rate is high because of  monthly income is comparitively low.This will be explained in decision tree section of this project.
+
+overTimePlot <- ggplot(Training,aes(OverTime,fill=Attrition))+
+geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(overTimePlot,top ="Attrition by OverTime")
+
+hikePlot <- ggplot(Training,aes(PercentSalaryHike,Attrition, color=Attrition))+geom_point(size=8,alpha = 0.01)+theme_classic()
+        #scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(hikePlot,top ="Attrition by Salary Hike ")
+
+perfPlot <- ggplot(Training,aes(PerformanceRating,fill = Attrition))+ 
+geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(perfPlot,top ="Attrition by Performance Rating ")
+
+RelSatPlot <- ggplot(Training,aes(RelationshipSatisfaction,fill = Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(RelSatPlot,top ="Attrition by RelationShip Satisfaction ")
+
+```
+
+```{r}
+
+StockPlot <- ggplot(Training,aes(StockOptionLevel,fill = Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(StockPlot,top ="Attrition by Stock Option Level")
+
+workingYearsPlot <- ggplot(Training,aes(TotalWorkingYears,fill = Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(workingYearsPlot,top ="Attrition by Years Working")
+
+TrainTimesPlot <- ggplot(Training,aes(TrainingTimesLastYear,fill = Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(TrainTimesPlot,top ="Attrition by Training Times")
+
+WLBPlot <- ggplot(Training,aes(WorkLifeBalance,fill = Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(WLBPlot,top ="Attrition by WorkLife Balance")
+
+```
+
+
+```{r}
+
+# Work Life Balance: Based on the metadata 1)‘Bad’ 2) ‘Good’ 3) ‘Better’ 4) ‘Best’. And we notice large volume of bad work life balance proportion (1 rating) left the organization, but absolute number wise 2 & 3 are on higher side. Then larger proportion of new comers are quitting the organization. Which sidelines the recruitment efforts of the organization, people who 'worked longer 're longer with the organization are on the likelyhood of staying. Also, larger proportion with just 0 years quitting. May be a role change is a trigger for Quitting. From the promotin perspective, larger proportion of people who have been promoted recently have quit the organization. And finally whoever endup with new manager end up quitting (which interprets that new Manager is a big cause for quitting.)
+
+YearAtComPlot <- ggplot(Training,aes(YearsAtCompany,fill = Attrition))+
+geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(YearAtComPlot,top ="Attrition by Years at Company")
+
+YearInCurrPlot <- ggplot(Training,aes(YearsInCurrentRole,fill = Attrition))+
+geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(YearInCurrPlot,top ="Attrition by Years in Current Role")
+
+YearsSinceProm <- ggplot(Training,aes(YearsSinceLastPromotion,fill = Attrition))+geom_bar(position = "fill")+
+         scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(YearsSinceProm,top ="Attrition by Years Since Last Promotion")
+
+YearsCurrManPlot <- ggplot(Training,aes(YearsWithCurrManager,fill = Attrition))+
+        geom_bar(position="dodge")+ scale_fill_discrete(h= c(0,360)+25, c=100, l=25, h.start = 0, direction = 1, na.value = "grey50")
+grid.arrange(YearsCurrManPlot,top ="Attrition by Years with CUrrent Manager")
+
+```

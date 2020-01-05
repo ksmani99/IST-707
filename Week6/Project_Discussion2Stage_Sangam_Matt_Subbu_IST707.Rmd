@@ -1,0 +1,228 @@
+---
+title: "ProjectIST707_Discussion2"
+author: "Subbu"
+date: "11/12/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary 
+Retaining human capital and talent management is increasingly becoming a competitive game within an already complex and adaptive economic system. In a tight labor market perks like flexibility to work from home or anywhere, signing bonuses, and equity in the form of restricted stock units are just a couple of the benefits that companies are offering their employees.
+
+The data set that the data analytics team is exploring is the IBM HR Analytics Employee Attrition & Performance. The aim is to use this data to predict the attrition of the most valuable employees.
+
+Questions: 
+1. What are the key factors that lead to employee attrition?
+
+2. How can companies improve and in what areas in order to retain their best employees and keep them from accepting a more attractive offer from a competitor?
+
+3. How can we predict which employees are at a higher risk for leaving?
+
+4. What can we do to proactively address these employees with a high risk for leaving to course correct their potential actions?
+
+*There are likely many more questions that will arise with further exploration of the data. The team believes that these preliminary questions will open the doors to other insightful analysis.
+
+Data Set: Contains 1,470 observations and 35 variables and a total of 51,450 values.
+ 
+```{r cars}
+
+#Step:1 Import Dataset 
+
+IBMHRData <- read.csv("HREmployeeAttrition.csv") 
+names(IBMHRData)
+
+# We cam see  column name for age "ï..Age"  need to be updated  on this dataset.
+colnames(IBMHRData)[1] <- "Age"
+ 
+library(caret)    # models
+library(lattice)  # robust & elegant  visualization
+library(ggplot2)  # plotting graphs
+library(grid) #  modify specific elements of a plot
+library(gridExtra) # to arrange multiple grid-based plots
+#Set seed number as starting point to generate random numbers
+set.seed(12345)  
+# Divide our dataset into training(75%) and testing(25%)
+inTrain <- createDataPartition(IBMHRData$Attrition,p=0.80,list = FALSE)
+Training <- IBMHRData[inTrain,] 
+Testing <- IBMHRData[-inTrain,]
+str(Training)
+
+```
+
+## Data Exploration  
+
+Looking at the attrition percentage from the training data set, we could see the attrition percentage is around  16%  (i.e., 16% - employees leaving organization.)
+In our Data exploration process, we are trying to understand how each variable in the dataset influencing the attrition of the organization.  We 're using ggplot2 to plot  and measure this and also using lattice, grid, gridExtra  for simple and better visualization.
+
+```{r pressure, echo=FALSE}
+#Using ggplot2 to view the attrition Percent of training set 
+attritionPlot <- ggplot(Training,aes(Attrition,fill=Attrition))+geom_bar()
+attritionPlot
+
+# Next step is to look at ALL variables and understand how each influence the attrition of this organization.
+
+#DailyRate : Rate is not presenting any distinguishable result. 
+
+ratePlot <- ggplot(Training,aes(DailyRate,Attrition, color = "red"))+geom_point(size=4,alpha = 0.05) + facet_grid(~Attrition)
+
+ ratePlot
+
+#Age : There is a clear indication that majority of the employees leaving the organization  are around 30 years  
+agePlot <- ggplot(Training,aes(Age,fill=Attrition, color = "red"))+geom_density()+facet_grid(~Attrition) 
+grid.arrange(agePlot, top = "Attrition by Age")
+
+
+#Department : Attrition rate is high from Research and development department, and HR department marks the least because of low proportion of HR employees in the organization.
+depPlot <- ggplot(Training,aes(Department,fill = Attrition, color = "red"))+geom_bar() 
+grid.arrange(depPlot, top = "Attrition by Department")
+
+#Travel : People who travel leave the most compare to the non-travel employees.
+travelPlot <- ggplot(Training,aes(Attrition,BusinessTravel,color=Attrition))+geom_jitter()
+grid.arrange(travelPlot, top = "Attrition by Employees who travel")
+
+```
+## Lets continue with second set of variables and see it's influence on the attrition 
+
+```{r}
+
+#Distance from Home : Unlike the norms, most  of employees who have left the organization were closer  to the Office. 
+
+distPlot <- ggplot(Training,aes(DistanceFromHome,fill=Attrition))+geom_bar() 
+grid.arrange(distPlot, top = "Attrition by Distance from work")
+
+#Education : Docts in the lowest numbers - probably due to very low percentage of doctors working.
+eduPlot <- ggplot(Training,aes(Education,fill=Attrition))+geom_bar()
+
+grid.arrange(eduPlot, top = "Attrition by education")
+#Education Field: On lines of the trend in Departments, a minority of HR educated employees leave and it is majorly because of low number of people
+
+edufieldPlot <- ggplot(Training,aes(EducationField,fill=Attrition))+geom_bar() 
+grid.arrange(edufieldPlot, top = "Attrition by education field")
+
+#Environment Satisfaction: Ratings stand for - 1 ‘Low’ 2 ‘Medium’ 3 ‘High’ 4 ‘Very High’ and it's not revealing any   distinguishable feature from what we see.
+
+envPlot <- ggplot(Training,aes(EnvironmentSatisfaction,fill=Attrition))+geom_bar() 
+grid.arrange(envPlot,top ="Attrition by Environment Satisfaction")
+
+#Gender: As you can see  majority of them left are Male and the reason might be because around 61% of employees in our dataset are Male
+
+genPlot <- ggplot(Training,aes(Gender,fill=Attrition))+geom_bar() 
+grid.arrange(genPlot,top ="Attrition by Gender")
+
+#grid.arrange(distPlot,eduPlot,edufieldPlot,envPlot,genPlot,ncol=2,top = "   Attrition by Variable - Contd..  ")
+
+
+```
+
+ 
+```{r}
+
+hourlyPlot <- ggplot(Training,aes(HourlyRate,fill=Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by HourlyPlot")
+
+jobInvPlot <- ggplot(Training,aes(JobInvolvement,fill=Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Job Involvement")
+
+jobLevelPlot <- ggplot(Training,aes(JobLevel,fill=Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Job Level")
+
+jobSatPlot <- ggplot(Training,aes(JobSatisfaction,fill=Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Job Satisfaction")
+
+```
+
+#------------------grid.arrange(genPlot,top ="Attrition by ")
+
+#-----------------
+```{r}
+marPlot <- ggplot(Training,aes(MaritalStatus,fill=Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by  Marital Status")
+
+monthlyIncPlot <- ggplot(Training,aes(MonthlyIncome,fill=Attrition))+geom_density()
+grid.arrange(genPlot,top ="Attrition by Monthly Income ")
+
+monthlyRatePlot <- ggplot(Training,aes(MonthlyRate,fill=Attrition))+geom_density()
+grid.arrange(genPlot,top ="Attrition by Monthly Rate ")
+
+numCompPlot <- ggplot(Training,aes(NumCompaniesWorked,fill=Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Companies Worked ")
+
+```
+
+```{r}
+overTimePlot <- ggplot(Training,aes(OverTime,fill=Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by OverTime")
+
+hikePlot <- ggplot(Training,aes(PercentSalaryHike,Attrition))+geom_point(size=4,alpha = 0.01)
+grid.arrange(genPlot,top ="Attrition by Salary Hike ")
+
+perfPlot <- ggplot(Training,aes(PerformanceRating,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Performance Rating ")
+
+RelSatPlot <- ggplot(Training,aes(RelationshipSatisfaction,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by RelationShip Satisfaction ")
+
+```
+
+```{r}
+
+StockPlot <- ggplot(Training,aes(StockOptionLevel,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Stock Option Level")
+
+workingYearsPlot <- ggplot(Training,aes(TotalWorkingYears,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Years Working")
+
+TrainTimesPlot <- ggplot(Training,aes(TrainingTimesLastYear,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Training Times")
+
+WLBPlot <- ggplot(Training,aes(WorkLifeBalance,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by WorkLife Balance")
+
+```
+
+
+```{r}
+
+# Work Life Balance: Based on the metadata 1)‘Bad’ 2) ‘Good’ 3) ‘Better’ 4) ‘Best’. And we notice large volume of bad work life balance proportion (1 rating) left the organization, but absolute number wise 2 & 3 are on higher side. Then larger proportion of new comers are quitting the organization. Which sidelines the recruitment efforts of the organization, people who 'worked longer 're longer with the organization are on the likelyhood of staying. Also, larger proportion with just 0 years quitting. May be a role change is a trigger for Quitting. From the promotin perspective, larger proportion of people who have been promoted recently have quit the organization. And finally whoever endup with new manager end up quitting (which interprets that new Manager is a big cause for quitting.)
+
+YearAtComPlot <- ggplot(Training,aes(YearsAtCompany,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Years at Company")
+
+YearInCurrPlot <- ggplot(Training,aes(YearsInCurrentRole,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Years in Current Role")
+
+YearsSinceProm <- ggplot(Training,aes(YearsSinceLastPromotion,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Years Since Last Promotion")
+
+YearsCurrManPlot <- ggplot(Training,aes(YearsWithCurrManager,fill = Attrition))+geom_bar()
+grid.arrange(genPlot,top ="Attrition by Years with CUrrent Manager")
+
+```
+
+#scatter plot between monthly income, work life balance and attrition
+#ggplot( Training,aes(MonthlyIncome,WorkLifeBalance, color=Attrition))+geom_point()
+
+#scatter plot between monthly income, JobLevel and attrition
+#ggplot(Training,aes(MonthlyIncome,JobLevel, color=Attrition))+geom_point()
+
+
+## Remaining workflow
+
+- Sampling - (if required ONLY)  Not sure if we need to use techniques like Oversampling or undersampling, because there are advantages and disadvantages.  And for this analysis we will not  get improved results using these techniques  so we can continue using the sample we have for model building.
+
+
+#Correlation  (Ideas)
+ - Years at Company, Years in Curr Role, Years with Curr Manager & Years Since Last Promotion  
+ - Job Level & Monthly Income  
+ - Percent Salary Hike & Performance Ratiing  
+
+Model Building (Decision Tree Models), 
+
+Select right model 
+
+& final  result 
+
+

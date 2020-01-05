@@ -1,0 +1,130 @@
+---
+title: "TitanicMultiModel"
+author: "Subbu Kandhaswamy"
+date: "11/26/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# prepare data
+First, load in train and test data
+
+```{r}
+trainset <- read.csv("C:/Users/Administrator/Documents/MSDatascience/IST707/Week8/titanic-train.csv")
+testset <- read.csv("C:/Users/Administrator/Documents/MSDatascience/IST707/Week8/titanic-test.csv")
+```
+
+Second, convert Survived to nominal variable, Pclass to ordinal
+```{r}
+trainset$Survived=factor(trainset$Survived)
+trainset$Pclass=ordered(trainset$Pclass)
+testset$Survived=factor(testset$Survived)
+testset$Pclass=ordered(testset$Pclass)
+```
+
+Third, replace missing value with mean and mode
+```{r}
+library(RWeka)
+MS <- make_Weka_filter("weka/filters/unsupervised/attribute/ReplaceMissingValues") 
+trainset_nomissing <-MS(data=trainset, na.action = NULL)
+testset_nomissing <-MS(data=testset, na.action = NULL)
+```
+
+Fourth, use RWeka InfoGain to rank feature relevance to prediction
+```{r}
+library("RWeka")
+InfoGainAttributeEval(Survived ~ . , data = trainset_nomissing)
+```
+Fifth, select potentially relevant variables for analysis
+```{r}
+myVars=c("Pclass", "Sex", "Age", "SibSp", "Fare", "Survived")
+newtrain=trainset_nomissing[myVars]
+newtest=testset_nomissing[myVars]
+str(newtrain)
+str(newtest)
+```
+
+Sixth, use the "infotheo" package to discretize numeric variable; combine train and test data for unified discretization
+```{r}
+# Kaggle returned lower accuracy .727
+#install.packages("infotheo")
+library(infotheo)
+data <- rbind(newtrain, newtest) 
+dData <- discretize(data[, 2:4], disc = "equalwidth", nbins=10)
+dData <- lapply(dData, as.factor)
+dData <- cbind(data[, c(1,6)], dData)
+dlabel <- data$Survived
+dData <- cbind(dData, dlabel)
+# separate train (1-891) and test
+train_index <- 1:891
+train1<- dData[train_index,]
+test1<- dData[-train_index,]
+```
+
+# train and test naive Bayes model
+```{r}
+library(e1071)
+nb=naiveBayes(Survived~., data = train1, laplace = 1, na.action = na.pass)
+nb
+pred=predict(nb, newdata=test1, type=c("class"))
+myids=c("PassengerId")
+id_col=testset[myids]
+newpred=cbind(id_col, pred)
+colnames(newpred)=c("Passengerid", "Survived")
+write.csv(newpred, file="C:/Users/Administrator/Documents/MSDatascience/IST707/Week8/titanic-NB-pred.csv", row.names=FALSE)
+```
+
+# kNN in the "class" package
+
+Now we will use the "class" package to run kNN. No missing values are allowed. No nominal values are allowed. Labels should be separated from train and test data. Kaggle returned accuracy .617
+```{r}
+# install.packages("class")
+library(class)
+train_labels = newtrain$Survived
+sex=as.numeric(newtrain$Sex)
+pclass=as.numeric(newtrain$Pclass)
+dtrain=cbind(sex, newtrain[, c(3,4)] )
+dtrain=cbind(dtrain, pclass)
+
+sex=as.numeric(newtest$Sex)
+pclass=as.numeric(newtest$Pclass)
+dtest=cbind(sex, newtest[, c(3,4)] )
+dtest=cbind(dtest, pclass)
+
+predKNN <- knn(train=dtrain, test=dtest, cl=train_labels, k=3)
+myids=c("PassengerId")
+id_col=testset[myids]
+newpred=cbind(id_col, predKNN)
+colnames(newpred)=c("Passengerid", "Survived")
+write.csv(newpred, file="C:/Users/Administrator/Documents/MSDatascience/IST707/Week8/titanic-kNN-pred.csv", row.names=FALSE)
+```
+
+# SVM
+Kaggle returned prediction accuray .77990
+```{r}
+library(e1071)
+svm<- svm(Survived~., data = newtrain)
+pred=predict(svm, newdata=newtest, type=c("class"))
+myids=c("PassengerId")
+id_col=testset[myids]
+newpred=cbind(id_col, pred)
+colnames(newpred)=c("Passengerid", "Survived")
+write.csv(newpred, file="C:/Users/Administrator/Documents/MSDatascience/IST707/Week8/titanic-SVM-pred.csv", row.names=FALSE)
+```
+
+# random forest on non-discretized data
+Kaggle returned accuracy .727
+```{r}
+#install.packages("randomForest")
+library(randomForest)
+rfm <- randomForest(Survived~., data=newtrain, ntree=10)
+print(rfm)
+predRF <- predict(rfm, newtest, type=c("class"))
+myids=c("PassengerId")
+id_col=testset[myids]
+newpred=cbind(id_col, pred)
+colnames(newpred)=c("Passengerid", "Survived")
+write.csv(newpred, file="C:/Users/Administrator/Documents/MSDatascience/IST707/Week8/titanic-RF-pred.csv", row.names=FALSE)
+```

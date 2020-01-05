@@ -1,0 +1,70 @@
+---
+title: "Kmeans"
+author: "Subbu Kandhaswamy"
+date: "10/30/2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+datazoo <- read.csv('C:/Users/Administrator/Documents/MSDatascience/IST707/Week4/zoo.csv')
+str(datazoo)
+```
+```{r}
+datazoocleaned <- datazoo[, 2:17]
+library(RWeka)
+model_rweka <- SimpleKMeans(datazoocleaned, control=Weka_control(N=7,  S=100))
+model_rweka
+```
+
+```{r}
+model_r <- kmeans(datazoocleaned,7)
+model_r
+```
+```{r}
+model_r$centers
+
+```
+
+```{r}
+cluster_assignment <- data.frame(datazoo,model_r$cluster)
+View(cluster_assignment)
+```
+
+  
+
+```{r pressure, echo=FALSE}
+plot(datazoo$type ~ jitter(model_r$cluster,1),pch=21,col=as.factor(datazoo$milk))
+```
+
+
+
+```{r}
+library(cluster)
+clusplot(datazoocleaned,model_r$cluster, color=TRUE, shade = T, labels = 2, lines = 0) # plot clusters
+```
+
+
+```{r}
+
+d=dist(as.matrix(datazoocleaned))
+hc=hclust(d)
+plot(hc)
+```
+
+
+```{r}
+
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

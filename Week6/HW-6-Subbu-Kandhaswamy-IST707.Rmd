@@ -1,0 +1,114 @@
+---
+title: "HW-6-Subbu-Kandhaswamy-IST707"
+author: "Subbu Kandhaswamy"
+date: "11/14/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+HW6: naïve Bayes and decision tree for handwriting recognition. The goal is to recognize digits 0 to 9 in handwriting images. We are going to use the sampled data to construct prediction models using naïve Bayes and decision tree algorithms. Tune their parameters to get the best model (measured by cross validation) and compare which algorithms provide better model for this task. 
+
+```{r cars}
+
+#Load required libraries
+
+library(dplyr)
+library(caret)
+library(rpart.plot)
+library(ggplot2)
+library(e1071)
+
+#Load train/test data
+
+kg_train_data<-read.csv("C:/Users/Administrator/Documents/MSDatascience/IST707/Week6/train.csv")
+kg_test_data<-read.csv("C:/Users/Administrator/Documents/MSDatascience/IST707/Week6/test.csv")
+
+#delete redundant pixels
+delete = c(
+  'pixel0',
+  'pixel1',
+  'pixel2',
+  'pixel3',
+  'pixel4',
+  'pixel5',
+  'pixel6',
+  'pixel7',
+  'pixel8',
+  'pixel9',
+  'pixel10',
+  'pixel11',
+  'pixel780',
+  'pixel781',
+  'pixel782',
+  'pixel783'
+)
+
+kg_train_data = kg_train_data[, !(names(kg_train_data) %in% delete)]
+kg_test_data = kg_test_data[, !(names(kg_test_data) %in% delete)]
+
+dim(kg_train_data)
+dim(kg_test_data)
+
+kg_train_data$label <- as.factor(kg_train_data$label)
+#Split
+
+#Splitting dataset into 10% and use it for classifiers
+trainSplit <- sample(nrow(kg_train_data), nrow(kg_train_data)* .1)
+testSplit<- sample(nrow(kg_test_data), nrow(kg_test_data)* .1)
+
+trainSubset <- kg_train_data[trainSplit,]
+testSubset <- kg_test_data[testSplit,]
+
+#Decision Tree Model
+
+decTreeTrain <- rpart(label ~ ., data = trainSubset, method = 'class', control= rpart.control(cp = 0), minsplit = 100, maxdepth = 10)
+
+#Next Testing accuracy of the model on Training Data
+
+trainPred <- data.frame(predict(decTreeTrain, trainSubset))
+
+trainPred <- as.data.frame(names(trainPred[apply(trainPred,1,which.max)]))
+colnames(trainPred) <- 'prediction'
+
+trainPred$number <- substr(trainPred$prediction, 2,2)
+
+trainPred <- trainSubset %>% bind_cols(trainPred) %>% select(label, number) %>% mutate(label=as.factor(label), number = as.factor(number))
+
+
+#Confusion Matrix
+confusionMatrix(trainPred$label, trainPred$number)
+
+# Naive Bayes
+
+nbTrain <- naiveBayes(as.factor(label) ~ ., data = trainSubset)
+
+nbTrainPred <- predict(nbTrain, trainSubset, type = 'class') 
+
+confusionMatrix(nbTrainPred, as.factor(trainSubset$label))
+
+
+```
+
+## Comparison of the Algorithms Performance
+
+According to our Algorithmic models, Decision tree performs better than Naïve Bayes for this set of data. Decision Tree has a predicting accuracy of 86.74% while Naïve Bayes has a predicting ability of 50.76% which is quite low. Naïve Bayes had problem determining 9 which can be fixed if the dataset was large. However, computations were performed on random sample of 10% data, but if we choose anther random sample or large sample data results could have been better.
+
+Decision Trees are very flexible, easy to understand, and easy to debug. They will work with classification problems and regression problems. Naive Bayes requires you build a classification by hand. There's no way to just toss a bunch of tabular data at it and have it pick the best features it will use to classify.
+As such there’s no better classifier, it depends upon problem to problem.
+
+Naive Bayes:
+1. Work well with small dataset compared to DT which need more data
+2. Lesser overfitting
+3. Smaller in size and faster in processing
+Decision Tree:
+1. Decision Trees are very flexible, easy to understand, and easy to debug
+2. No preprocessing or transformation of features required
+3. Prone to overfitting but you can user pruning or Random forests to avoid that.
+
+
+ 
